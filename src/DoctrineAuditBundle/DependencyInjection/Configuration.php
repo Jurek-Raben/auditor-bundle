@@ -46,7 +46,12 @@ class Configuration implements ConfigurationInterface
                     ->prototype('scalar')->end()
                 ->end()
 
-                ->scalarNode('timezone')
+            ->arrayNode('included_data')
+            ->canBeUnset()
+            ->prototype('scalar')->end()
+            ->end()
+
+            ->scalarNode('timezone')
                     ->defaultValue('UTC')
                 ->end()
 
@@ -55,6 +60,10 @@ class Configuration implements ConfigurationInterface
                     ->prototype('array')
                         ->children()
                             ->arrayNode('ignored_columns')
+                                ->canBeUnset()
+                                ->prototype('scalar')->end()
+                            ->end()
+                            ->arrayNode('included_data')
                                 ->canBeUnset()
                                 ->prototype('scalar')->end()
                             ->end()

@@ -46,6 +46,11 @@ class AuditConfiguration
     /**
      * @var array
      */
+    private $includedData = [];
+
+    /**
+     * @var array
+     */
     private $entities = [];
 
     /**
@@ -91,12 +96,12 @@ class AuditConfiguration
     /**
      * AuditConfiguration constructor.
      *
-     * @param array                    $config
-     * @param UserProviderInterface    $userProvider
-     * @param RequestStack             $requestStack
-     * @param FirewallMap              $firewallMap
-     * @param EntityManagerInterface   $entityManager
-     * @param null|AnnotationLoader    $annotationLoader
+     * @param array $config
+     * @param UserProviderInterface $userProvider
+     * @param RequestStack $requestStack
+     * @param FirewallMap $firewallMap
+     * @param EntityManagerInterface $entityManager
+     * @param null|AnnotationLoader $annotationLoader
      * @param EventDispatcherInterface $dispatcher
      *
      * @throws ReflectionException
@@ -109,7 +114,8 @@ class AuditConfiguration
         EntityManagerInterface $entityManager,
         ?AnnotationLoader $annotationLoader,
         EventDispatcherInterface $dispatcher
-    ) {
+    )
+    {
         $this->userProvider = $userProvider;
         $this->requestStack = $requestStack;
         $this->firewallMap = $firewallMap;
@@ -127,6 +133,10 @@ class AuditConfiguration
         $this->tableSuffix = $config['table_suffix'];
         $this->timezone = $config['timezone'];
         $this->ignoredColumns = $config['ignored_columns'];
+        if (!isset($config['included_data'])) {
+            $config['included_data'] = [];
+        }
+        $this->includedData = $config['included_data'];
 
         if (isset($config['entities']) && !empty($config['entities'])) {
             // use entity names as array keys for easier lookup
@@ -272,7 +282,7 @@ class AuditConfiguration
         }
 
         if (isset($entityOptions['enabled'])) {
-            return (bool) $entityOptions['enabled'];
+            return (bool)$entityOptions['enabled'];
         }
 
         return true;
@@ -282,7 +292,7 @@ class AuditConfiguration
      * Returns true if $field is audited.
      *
      * @param object|string $entity
-     * @param string        $field
+     * @param string $field
      *
      * @return bool
      */
@@ -311,6 +321,46 @@ class AuditConfiguration
         // are columns excluded and is field part of them?
         if (isset($entityOptions['ignored_columns']) &&
             \in_array($field, $entityOptions['ignored_columns'], true)) {
+            // yes => $field is not audited
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns true if $field data is included.
+     *
+     * @param object|string $entity
+     * @param string $field
+     *
+     * @return bool
+     */
+    public function isIncludedDataField($entity, string $field): bool
+    {
+        // is $field is part of globally ignored columns?
+        if (\in_array($field, $this->includedData, true)) {
+            // yes => $field is not audited
+            return false;
+        }
+
+        // is $entity audited?
+        if (!$this->isAudited($entity)) {
+            // no => $field is not audited
+            return false;
+        }
+
+        $class = DoctrineHelper::getRealClassName($entity);
+        $entityOptions = $this->getEntities()[$class];
+
+        if (null === $entityOptions) {
+            // no option defined => $field is audited
+            return true;
+        }
+
+        // are columns excluded and is field part of them?
+        if (isset($entityOptions['included_data']) &&
+            \in_array($field, $entityOptions['included_data'], true)) {
             // yes => $field is not audited
             return false;
         }
@@ -356,6 +406,16 @@ class AuditConfiguration
     public function getIgnoredColumns(): array
     {
         return $this->ignoredColumns;
+    }
+
+    /**
+     * Get the value of includedData.
+     *
+     * @return array<string>
+     */
+    public function getIncludedData(): array
+    {
+        return $this->includedData;
     }
 
     /**

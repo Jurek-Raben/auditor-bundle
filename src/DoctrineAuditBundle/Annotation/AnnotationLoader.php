@@ -78,6 +78,7 @@ class AnnotationLoader
 
         $config = [
             'ignored_columns' => [],
+            'included_data' => [],
             'enabled' => $auditableAnnotation->enabled,
             'roles' => $roles,
         ];
@@ -87,6 +88,14 @@ class AnnotationLoader
             if ($this->reader->getPropertyAnnotation($property, Ignore::class)) {
                 // TODO: $property->getName() might not be the column name
                 $config['ignored_columns'][] = $property->getName();
+            }
+        }
+
+        // Are there any IncludeColumn annotations?
+        foreach ($reflection->getProperties() as $property) {
+            if ($this->reader->getPropertyAnnotation($property, IncludeData::class)) {
+                // TODO: $property->getName() might not be the column name
+                $config['included_data'][] = $property->getName();
             }
         }
 
